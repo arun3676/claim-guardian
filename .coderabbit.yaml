@@ -1,7 +1,95 @@
-# CodeRabbit Configuration
-language: typescript, python, yaml
-review:
-  enabled: true
-  auto_review: true
-  max_comments: 50
+# CodeRabbit Configuration for ClaimGuardian AI
+# AssembleHack25 - CodeRabbit Prize ($1,000)
 
+# Language settings
+language: "en-US"
+
+# Review settings
+reviews:
+  # Enable automatic reviews on PRs
+  auto_review:
+    enabled: true
+    # Review all file types
+    ignore_title_keywords: []
+    
+  # What to focus on
+  profile: "assertive"
+  
+  # Request changes for critical issues
+  request_changes_workflow: true
+  
+  # High-level summary
+  high_level_summary: true
+  high_level_summary_placeholder: "@coderabbitai summary"
+  
+  # Review status comment
+  review_status: true
+  
+  # Path-based instructions
+  path_instructions:
+    - path: "**/*.py"
+      instructions: |
+        Focus on:
+        - HIPAA compliance (no PII exposure)
+        - Security vulnerabilities
+        - Medical billing accuracy
+        - Error handling for patient data
+        
+    - path: "**/*.ts"
+      instructions: |
+        Focus on:
+        - Type safety
+        - API security
+        - Input validation for medical data
+        - Error boundaries
+        
+    - path: "**/*.tsx"
+      instructions: |
+        Focus on:
+        - Accessibility (WCAG compliance)
+        - User data protection
+        - Form validation
+        - Error states for medical forms
+        
+    - path: "**/mcp-*/**"
+      instructions: |
+        This is an MCP (Model Context Protocol) server for Cline.
+        Focus on:
+        - Tool registration correctness
+        - Medical code accuracy (CPT, ICD-10)
+        - Medicare rate calculations
+        - Appeal letter legal compliance
+        
+    - path: "**/kestra-*/**"
+      instructions: |
+        This is a Kestra workflow configuration.
+        Focus on:
+        - Workflow correctness
+        - Human-in-the-loop implementation
+        - Error handling in pipeline
+        - Data flow between tasks
+        
+    - path: "**/oumi-*/**"
+      instructions: |
+        This is Oumi ML training code.
+        Focus on:
+        - Training configuration
+        - Reward function correctness
+        - Model evaluation metrics
+        - HuggingFace integration
+
+# Chat settings (for @coderabbitai commands)
+chat:
+  auto_reply: true
+
+# Knowledge base (learns from your codebase)
+knowledge_base:
+  learnings:
+    scope: "auto"
+  issues:
+    scope: "auto"
+  pull_requests:
+    scope: "auto"
+
+# Early access features
+early_access: true
