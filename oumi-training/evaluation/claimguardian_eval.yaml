@@ -1,0 +1,48 @@
+
+# ClaimGuardian Medical Billing Model Evaluation Config
+# For use with: oumi evaluate -c claimguardian_eval.yaml
+
+model:
+  model_name: "arungenailab/claimguardian-medical-billing-v2"
+  trust_remote_code: true
+
+evaluation:
+  # Custom medical billing benchmark
+  tasks:
+    - name: "cpt_code_accuracy"
+      type: "classification"
+      dataset: "medical_billing_eval_dataset"
+      metrics:
+        - accuracy
+        - f1_score
+        - precision
+        - recall
+      
+    - name: "billing_error_detection"
+      type: "binary_classification"
+      metrics:
+        - accuracy
+        - auc_roc
+        - confusion_matrix
+    
+    - name: "appeal_letter_quality"
+      type: "generation"
+      metrics:
+        - bleu
+        - rouge_l
+        - perplexity
+      judge_config: "medical_billing_judge.yaml"
+
+output:
+  format: "json"
+  path: "evaluation_results/"
+  include_examples: true
+
+# Benchmark against baselines
+baselines:
+  - "Qwen/Qwen2-0.5B-Instruct"  # Base model before fine-tuning
+  
+generation:
+  max_new_tokens: 512
+  temperature: 0.7
+  do_sample: true

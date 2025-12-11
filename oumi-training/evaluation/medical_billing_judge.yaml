@@ -1,0 +1,37 @@
+
+judge_params:
+  prompt_template: |
+    You are an expert medical billing auditor evaluating AI-generated billing analysis.
+    
+    Evaluate the following medical billing analysis on these criteria:
+    
+    1. CPT_ACCURACY: Is the CPT code identification correct?
+    2. ERROR_DETECTION: Were billing errors properly identified?
+    3. APPEAL_QUALITY: Is the appeal letter professional and actionable?
+    4. COMPLIANCE: Does the analysis follow HIPAA and CMS guidelines?
+    
+    ***
+    [Original Medical Bill]:
+    {request}
+    ***
+    [AI Analysis]:
+    {response}
+    ***
+    [Ground Truth (if available)]:
+    {reference}
+    ***
+    
+    Provide a score from 1-10 for each criterion and an overall judgment.
+
+  response_format: JSON
+  judgment_type: SCORE
+  include_explanation: True
+  score_range: [1, 10]
+
+inference_config:
+  model:
+    model_name: "gpt-4o"
+  engine: OPENAI
+  generation:
+    max_new_tokens: 2048
+    temperature: 0.3

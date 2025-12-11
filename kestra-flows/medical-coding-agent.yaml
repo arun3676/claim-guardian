@@ -1,0 +1,12 @@
+id: medical-coding-agent
+namespace: claimguardian
+description: AI agent for medical coding and claim processing
+
+tasks:
+  - id: process-claim
+    type: io.kestra.core.tasks.scripts.Script
+    description: Process medical claim with AI coding agent
+    script: |
+      # TODO: Implement medical coding logic
+      echo "Processing medical claim..."
+

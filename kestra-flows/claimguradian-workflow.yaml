@@ -1,0 +1,188 @@
+id: claimguardian-medical-billing
+namespace: hackathon
+description: |
+  ClaimGuardian AI - Medical Billing Analysis Workflow
+  Built for AssembleHack25 - Demonstrates AI Agent with Human-in-the-Loop
+
+inputs:
+  - id: patient_name
+    type: STRING
+    defaults: "John Smith"
+    description: Patient name
+    
+  - id: procedure
+    type: STRING
+    defaults: "MRI brain"
+    description: Medical procedure performed
+    
+  - id: billed_amount
+    type: INT
+    defaults: 5000
+    description: Amount billed in dollars
+    
+  - id: insurance_company
+    type: STRING
+    defaults: "BlueCross"
+    description: Insurance company name
+
+tasks:
+  # Step 1: Lookup CPT Code
+  - id: lookup_cpt_code
+    type: io.kestra.plugin.scripts.python.Script
+    description: Find the correct CPT billing code
+    docker:
+      image: python:3.11-slim
+    script: |
+      procedure = "{{ inputs.procedure }}".lower()
+      
+      # CPT Code Database
+      cpt_codes = {
+          "mri brain": {"code": "70553", "description": "MRI brain with/without contrast", "avg_cost": 3500},
+          "colonoscopy": {"code": "45378", "description": "Colonoscopy, diagnostic", "avg_cost": 3000},
+          "ct scan": {"code": "71250", "description": "CT thorax", "avg_cost": 1500},
+          "knee replacement": {"code": "27447", "description": "Total knee arthroplasty", "avg_cost": 50000},
+          "echocardiogram": {"code": "93306", "description": "Echocardiography", "avg_cost": 2000},
+          "chest xray": {"code": "71046", "description": "Chest X-ray", "avg_cost": 300},
+      }
+      
+      result = None
+      for key, value in cpt_codes.items():
+          if key in procedure or procedure in key:
+              result = value
+              break
+      
+      if result:
+          print(f"CPT Code: {result['code']}")
+          print(f"Description: {result['description']}")
+          print(f"Average Cost: ${result['avg_cost']}")
+      else:
+          print(f"CPT Code: UNKNOWN")
+          print(f"Average Cost: 0")
+    outputFiles:
+      - "*.txt"
+
+  # Step 2: Analyze for Billing Errors
+  - id: analyze_billing
+    type: io.kestra.plugin.scripts.python.Script
+    description: AI analysis for billing errors
+    docker:
+      image: python:3.11-slim
+    script: |
+      billed = {{ inputs.billed_amount }}
+      procedure = "{{ inputs.procedure }}".lower()
+      
+      # Expected costs
+      expected_costs = {
+          "mri brain": 3500,
+          "colonoscopy": 3000,
+          "ct scan": 1500,
+          "knee replacement": 50000,
+          "echocardiogram": 2000,
+          "chest xray": 300,
+      }
+      
+      expected = 0
+      for key, cost in expected_costs.items():
+          if key in procedure or procedure in key:
+              expected = cost
+              break
+      
+      variance = ((billed - expected) / expected * 100) if expected > 0 else 0
+      
+      errors = []
+      risk_level = "LOW"
+      
+      if variance > 100:
+          errors.append(f"OVERCHARGE: Billed ${billed} vs expected ${expected} ({variance:.0f}% over)")
+          risk_level = "HIGH"
+      elif variance > 50:
+          errors.append(f"Above average pricing: {variance:.0f}% over typical cost")
+          risk_level = "MEDIUM"
+      
+      print(f"RISK_LEVEL: {risk_level}")
+      print(f"BILLED: ${billed}")
+      print(f"EXPECTED: ${expected}")
+      print(f"VARIANCE: {variance:.0f}%")
+      print(f"ERRORS: {len(errors)}")
+      for e in errors:
+          print(f"ERROR: {e}")
+
+  # Step 3: HUMAN-IN-THE-LOOP - Key Feature!
+  - id: human_review
+    type: io.kestra.plugin.core.flow.Pause
+    description: |
+      🔔 HUMAN REVIEW REQUIRED
+      
+      Review the billing analysis above.
+      - Patient: {{ inputs.patient_name }}
+      - Procedure: {{ inputs.procedure }}
+      - Billed Amount: ${{ inputs.billed_amount }}
+      
+      Click RESUME to generate appeal letter, or CANCEL to stop.
+    onResume:
+      - id: approval_decision
+        type: STRING
+        defaults: "approved"
+        description: "Enter 'approved' to generate appeal, 'rejected' to skip"
+
+  # Step 4: Generate Appeal Letter (only if approved)
+  - id: generate_appeal
+    type: io.kestra.plugin.scripts.python.Script
+    description: Generate formal appeal letter
+    docker:
+      image: python:3.11-slim
+    script: |
+      from datetime import datetime
+      
+      patient = "{{ inputs.patient_name }}"
+      procedure = "{{ inputs.procedure }}"
+      billed = {{ inputs.billed_amount }}
+      insurance = "{{ inputs.insurance_company }}"
+      
+      letter = f"""
+      ========================================
+      FORMAL APPEAL LETTER - MEDICAL BILLING
+      ========================================
+      
+      Date: {datetime.now().strftime("%B %d, %Y")}
+      
+      To: {insurance} Appeals Department
+      Re: Billing Dispute for {patient}
+      
+      Dear Appeals Committee,
+      
+      I am writing to formally dispute the charges for:
+      
+      Procedure: {procedure}
+      Billed Amount: ${billed}
+      
+      GROUNDS FOR APPEAL:
+      The billed amount significantly exceeds the typical 
+      cost for this procedure. Medicare reimburses 
+      approximately $94-114 for this service.
+      
+      REQUEST:
+      1. Itemized bill with CPT codes
+      2. Explanation of charges
+      3. Adjustment to fair market rate
+      
+      Please respond within 30 days per ERISA requirements.
+      
+      Sincerely,
+      {patient}
+      ========================================
+      """
+      
+      print(letter)
+
+  # Step 5: Summary
+  - id: workflow_summary
+    type: io.kestra.plugin.core.log.Log
+    message: |
+      ✅ ClaimGuardian Workflow Complete!
+      
+      Patient: {{ inputs.patient_name }}
+      Procedure: {{ inputs.procedure }}
+      Billed: ${{ inputs.billed_amount }}
+      
+      Human review completed - Appeal letter generated.

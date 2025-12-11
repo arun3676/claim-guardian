@@ -1,0 +1,7 @@
+# CodeRabbit Configuration
+language: typescript, python, yaml
+review:
+  enabled: true
+  auto_review: true
+  max_comments: 50
+

@@ -1,0 +1,17 @@
+# GRPO Training Configuration
+# Group Relative Policy Optimization for medical billing models
+
+model:
+  name: claimguardian-model
+  base_model: mistral-7b
+
+training:
+  method: grpo
+  epochs: 10
+  batch_size: 8
+  learning_rate: 1e-5
+
+data:
+  path: ./data
+  format: jsonl
+
