@@ -2,7 +2,7 @@ id: claimguardian-medical-billing
 namespace: hackathon
 description: |
   ClaimGuardian AI - Medical Billing Analysis Workflow
-  Built for AssembleHack25 - Demonstrates AI Agent with Human-in-the-Loop
+  Demonstrates AI Agent with Human-in-the-Loop
 
 inputs:
   - id: patient_name
