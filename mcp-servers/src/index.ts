@@ -246,6 +246,10 @@ function validateInsuranceClaim(claimId: string, cptCodes: string[], diagnosisCo
   let appropriateMatches = 0;
   let totalChecks = 0;
 
+  // Validation regexes
+  const CPT_CODE_REGEX = /^[0-9]{5}(-[A-Z0-9]{2})?$/;
+  const ICD10_CODE_REGEX = /^[A-Z][0-9]{2}\.?[0-9A-Z]{0,4}$/;
+
   // Medical appropriateness mapping
   const medicalMappings: Record<string, string[]> = {
     // Diagnosis categories -> Appropriate procedure categories
@@ -260,6 +264,13 @@ function validateInsuranceClaim(claimId: string, cptCodes: string[], diagnosisCo
 
   // Validate CPT codes exist
   for (const cptCode of cptCodes) {
+    // Validate format first
+    if (!CPT_CODE_REGEX.test(cptCode)) {
+      errors.push(`CPT code ${cptCode} has invalid format`);
+      invalidCodes.push(cptCode);
+      continue;
+    }
+
     const procedure = Object.values(CPT_CODES).find(p => p.code === cptCode);
     if (!procedure) {
       errors.push(`CPT code ${cptCode} not found in database`);
@@ -272,6 +283,12 @@ function validateInsuranceClaim(claimId: string, cptCodes: string[], diagnosisCo
   // Validate ICD-10 codes exist
   const validDiagnoses: string[] = [];
   for (const icdCode of diagnosisCodes) {
+    // Validate format first
+    if (!ICD10_CODE_REGEX.test(icdCode)) {
+      errors.push(`ICD-10 code ${icdCode} has invalid format`);
+      continue;
+    }
+
     const diagnosis = Object.values(ICD10_CODES).find(d => d.code === icdCode);
     if (!diagnosis) {
       errors.push(`ICD-10 code ${icdCode} not found in database`);
