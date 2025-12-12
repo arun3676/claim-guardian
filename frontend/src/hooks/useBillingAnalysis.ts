@@ -223,7 +223,10 @@ export const useBillingAnalysis = () => {
       return data.description || `Procedure ${cptCode}`;
     } catch (error) {
       // HIPAA compliant fallback - no sensitive data in logs
-      console.log(`CPT lookup error for code ${cptCode.substring(0, 3)}XXX`);
+      // Log error in development only (HIPAA-compliant - no full CPT codes)
+      if (process.env.NODE_ENV === 'development') {
+        console.error(`CPT lookup error for code ${cptCode.substring(0, 3)}XXX`);
+      }
       return `Procedure ${cptCode}`;
     }
   }, []);

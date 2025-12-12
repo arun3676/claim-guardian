@@ -93,7 +93,10 @@ export async function analyzeBillingErrors(items: BillingItem[]): Promise<Billin
 
     } catch (error) {
       // Log anonymized error for HIPAA compliance - no sensitive billing data exposed
-      console.log(`Bill analysis error for CPT ${item.cptCode.substring(0, 3)}XXX`);
+      // Log error in development only (HIPAA-compliant - no full CPT codes)
+      if (process.env.NODE_ENV === 'development') {
+        console.error(`Bill analysis error for CPT ${item.cptCode.substring(0, 3)}XXX`);
+      }
       throw new Error(`Failed to get Medicare rate for CPT ${item.cptCode}`);
     }
   }
