@@ -225,6 +225,12 @@ const BILLING_RULES: BillingRule[] = [
 // =============================================================================
 // CLAIM VALIDATION LOGIC
 // =============================================================================
+
+// ========================================================================
+// CODE FORMAT VALIDATION REGEXES
+// ========================================================================
+const CPT_CODE_REGEX = /^[0-9]{5}(-[A-Z0-9]{2})?$/;
+const ICD10_CODE_REGEX = /^[A-Z][0-9]{2}\.?[0-9A-Z]{0,4}$/;
 interface ValidationResult {
   valid: boolean;
   errors: string[];
@@ -246,10 +252,7 @@ function validateInsuranceClaim(claimId: string, cptCodes: string[], diagnosisCo
   let appropriateMatches = 0;
   let totalChecks = 0;
 
-  // Validation regexes
-  const CPT_CODE_REGEX = /^[0-9]{5}(-[A-Z0-9]{2})?$/;
-  const ICD10_CODE_REGEX = /^[A-Z][0-9]{2}\.?[0-9A-Z]{0,4}$/;
-
+  
   // Medical appropriateness mapping
   const medicalMappings: Record<string, string[]> = {
     // Diagnosis categories -> Appropriate procedure categories
