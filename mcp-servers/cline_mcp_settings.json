@@ -2,7 +2,7 @@
   "mcpServers": {
     "claimguardian": {
       "command": "npx",
-      "args": ["-y", "tsx", "C:\\Users\\arunk\\hackathon\\Bill optimizer\\mcp-servers\\src\\index.ts"]
+      "args": ["-y", "tsx", "./mcp-servers/src/index.ts"]
     }
   }
 }

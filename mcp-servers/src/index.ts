@@ -225,6 +225,12 @@ const BILLING_RULES: BillingRule[] = [
 // =============================================================================
 // CLAIM VALIDATION LOGIC
 // =============================================================================
+
+// ========================================================================
+// CODE FORMAT VALIDATION REGEXES
+// ========================================================================
+const CPT_CODE_REGEX = /^[0-9]{5}(-[A-Z0-9]{2})?$/;
+const ICD10_CODE_REGEX = /^[A-Z][0-9]{2}\.?[0-9A-Z]{0,4}$/;
 interface ValidationResult {
   valid: boolean;
   errors: string[];
@@ -246,10 +252,7 @@ function validateInsuranceClaim(claimId: string, cptCodes: string[], diagnosisCo
   let appropriateMatches = 0;
   let totalChecks = 0;
 
-  // Validation regexes
-  const CPT_CODE_REGEX = /^[0-9]{5}(-[A-Z0-9]{2})?$/;
-  const ICD10_CODE_REGEX = /^[A-Z][0-9]{2}\.?[0-9A-Z]{0,4}$/;
-
+  
   // Medical appropriateness mapping
   const medicalMappings: Record<string, string[]> = {
     // Diagnosis categories -> Appropriate procedure categories
@@ -514,10 +517,6 @@ server.tool(
     diagnosis: z.string().describe("The medical diagnosis or condition to look up"),
   },
   async ({ diagnosis }) => {
-    // LOG: Tool was actually called!
-    console.error(`[MCP TOOL CALLED] lookup_icd10_code called with diagnosis: "${diagnosis}"`);
-    console.error(`[MCP DEBUG] Full arguments received:`, JSON.stringify({ diagnosis }, null, 2));
-    
     // Handle case where task_progress might be passed (Cline sometimes adds extra args)
     let cleanDiagnosis: string;
     if (typeof diagnosis === 'string') {
@@ -534,8 +533,6 @@ server.tool(
     if (ICD10_CODES[diagnosisLower]) {
       const timestamp = new Date().toISOString();
       const toolCallId = `MCP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      console.error(`[MCP TOOL RESULT] Exact match found: ${ICD10_CODES[diagnosisLower].code}`);
-      console.error(`[MCP TOOL CALL ID] ${toolCallId}`);
       return {
         content: [{
           type: "text",
@@ -560,8 +557,6 @@ server.tool(
       if (key.length <= 10 && diagnosisLower.includes(key)) {
         const timestamp = new Date().toISOString();
         const toolCallId = `MCP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        console.error(`[MCP TOOL RESULT] Acronym match found: ${value.code} (${key})`);
-        console.error(`[MCP TOOL CALL ID] ${toolCallId}`);
         return {
           content: [{
             type: "text",
@@ -624,10 +619,8 @@ server.tool(
     }
     
     if (bestMatch && bestScore > 0) {
-      console.error(`[MCP TOOL RESULT] Found match: ${bestMatch.code} for "${diagnosis}"`);
       const timestamp = new Date().toISOString();
       const toolCallId = `MCP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      console.error(`[MCP TOOL CALL ID] ${toolCallId}`);
       return {
         content: [{
           type: "text",
@@ -653,11 +646,8 @@ server.tool(
       };
     }
     
-    console.error(`[MCP TOOL RESULT] No match found, using AI fallback for "${cleanDiagnosis}"`);
-    
     const timestamp = new Date().toISOString();
     const toolCallId = `MCP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    console.error(`[MCP TOOL CALL ID] ${toolCallId}`);
     
     // Fallback to AI
     const aiResponse = await callOumiModel(
