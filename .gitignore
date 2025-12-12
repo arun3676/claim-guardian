@@ -37,3 +37,9 @@ tmp/
 temp/
 *.tmp
 
+# Documentation files (exclude all markdown files)
+*.md
+
+# Scripts mentioning prize/sponsor
+create-prs.ps1
+

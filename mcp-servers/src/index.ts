@@ -5,7 +5,7 @@
  * 
  * KEY DIFFERENTIATOR: Integrates with our fine-tuned Oumi model!
  * 
- * Built for AssembleHack25 - Cline Prize Submission ($5,000)
+ * Built for AssembleHack25 - Cline Integration
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";

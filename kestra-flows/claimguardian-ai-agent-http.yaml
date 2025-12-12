@@ -79,7 +79,14 @@ tasks:
     outputFormat: JSON
     storeOutput: true
 
-  # Step 4: Extract summary from AI response
+  # Step 4: Write response body to file for parsing
+  - id: write_summary_response
+    type: io.kestra.plugin.fs.Write
+    description: Write HTTP response body to file for parsing
+    content: "{{ outputs.ai_summarize_bill.body }}"
+    to: "/tmp/ai_response.json"
+
+  # Step 5: Extract summary from AI response
   - id: extract_summary
     type: io.kestra.plugin.scripts.python.Script
     description: Extract summary text from AI response
@@ -87,15 +94,17 @@ tasks:
       image: python:3.11-slim
     script: |
       import json
-      import sys
       
-      # Read AI response
-      response_file = "{{ outputs.ai_summarize_bill.body }}"
-      with open(response_file, 'r') as f:
+      # Read AI response from file
+      with open('/tmp/ai_response.json', 'r') as f:
           response_data = json.load(f)
       
       # Extract summary
       summary = response_data['choices'][0]['message']['content']
+      
+      # Write summary to output file
+      with open('/tmp/bill_summary.txt', 'w') as f:
+          f.write(summary)
       
       print(f"BILL_SUMMARY: {summary}")
     outputFiles:
@@ -136,7 +145,14 @@ tasks:
     outputFormat: JSON
     storeOutput: true
 
-  # Step 6: Parse decision JSON
+  # Step 6: Write decision response body to file for parsing
+  - id: write_decision_response
+    type: io.kestra.plugin.fs.Write
+    description: Write HTTP decision response body to file for parsing
+    content: "{{ outputs.ai_make_decision.body }}"
+    to: "/tmp/decision_response.json"
+
+  # Step 7: Parse decision JSON
   - id: parse_decision
     type: io.kestra.plugin.scripts.python.Script
     description: Parse AI decision JSON
@@ -144,15 +160,15 @@ tasks:
       image: python:3.11-slim
     script: |
       import json
-      import sys
       
-      # Read decision response
-      decision_file = "{{ outputs.ai_make_decision.body }}"
-      with open(decision_file, 'r') as f:
+      # Read decision response from file
+      with open('/tmp/decision_response.json', 'r') as f:
           decision_data = json.load(f)
       
+      # Extract the decision JSON from the message content
       decision_json = json.loads(decision_data['choices'][0]['message']['content'])
       
+      # Print decision details
       print(f"RISK_LEVEL: {decision_json.get('risk_level', 'UNKNOWN')}")
       print(f"RECOMMENDED_ACTION: {decision_json.get('recommended_action', 'UNKNOWN')}")
       print(f"PRIORITY: {decision_json.get('priority', 'UNKNOWN')}")
@@ -162,11 +178,19 @@ tasks:
       # Save full JSON for later use
       with open('/tmp/decision.json', 'w') as f:
           json.dump(decision_json, f, indent=2)
+      
+      # Save formatted output for report
+      with open('/tmp/decision_output.txt', 'w') as f:
+          f.write(f"Risk Level: {decision_json.get('risk_level', 'UNKNOWN')}\n")
+          f.write(f"Recommended Action: {decision_json.get('recommended_action', 'UNKNOWN')}\n")
+          f.write(f"Priority: {decision_json.get('priority', 'UNKNOWN')}\n")
+          f.write(f"Reasoning: {decision_json.get('reasoning', 'N/A')}\n")
+          f.write(f"Estimated Overcharge: {decision_json.get('estimated_overcharge', 'N/A')}\n")
     outputFiles:
       - "*.txt"
       - "*.json"
 
-  # Step 7: Generate comprehensive report
+  # Step 8: Generate comprehensive report
   - id: generate_final_report
     type: io.kestra.plugin.core.log.Log
     description: Generate final report combining AI summary and decisions
@@ -195,7 +219,7 @@ tasks:
       This workflow uses Kestra's built-in HTTP plugin for AI integration
       ========================================
 
-  # Step 8: Conditional task based on AI decision
+  # Step 9: Conditional task based on AI decision
   - id: route_by_decision
     type: io.kestra.plugin.scripts.python.Script
     description: Route workflow based on AI Agent decision
@@ -228,7 +252,7 @@ tasks:
     outputFiles:
       - "*.txt"
 
-  # Step 9: Final summary
+  # Step 10: Final summary
   - id: workflow_complete
     type: io.kestra.plugin.core.log.Log
     description: Workflow completion summary
