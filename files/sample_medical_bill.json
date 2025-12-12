@@ -1,0 +1,41 @@
+{
+  "patient_name": "John Smith",
+  "date_of_service": "2025-12-01",
+  "provider_name": "City General Hospital",
+  "claim_number": "CLM-2025-001",
+  "total_billed": 87500,
+  "procedures": [
+    {
+      "description": "MRI brain with and without contrast",
+      "cpt_code": "70553",
+      "billed_amount": 6500,
+      "date": "2025-12-01"
+    },
+    {
+      "description": "Colonoscopy, diagnostic",
+      "cpt_code": "45378",
+      "billed_amount": 4500,
+      "date": "2025-12-01"
+    },
+    {
+      "description": "Total knee arthroplasty",
+      "cpt_code": "27447",
+      "billed_amount": 76500,
+      "date": "2025-12-01"
+    }
+  ],
+  "diagnoses": [
+    {
+      "description": "Migraine headache",
+      "icd10_code": "G43.909"
+    },
+    {
+      "description": "Abdominal pain",
+      "icd10_code": "R10.9"
+    },
+    {
+      "description": "Osteoarthritis of knee",
+      "icd10_code": "M17.9"
+    }
+  ]
+}
