@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "claimguardian": {
-      "command": "C:\\Program Files\\nodejs\\node.exe",
-      "args": ["C:\\Users\\arunk\\hackathon\\Bill optimizer\\mcp-fixed\\server.mjs"]
+      "command": "npx",
+      "args": ["-y", "tsx", "C:\\Users\\arunk\\hackathon\\Bill optimizer\\mcp-servers\\src\\index.ts"]
     }
   }
 }
