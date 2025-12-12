@@ -4,8 +4,6 @@
  * Custom Model Context Protocol server for medical billing automation
  * 
  * KEY DIFFERENTIATOR: Integrates with our fine-tuned Oumi model!
- * 
- * Built for AssembleHack25 - Cline Prize Submission ($5,000)
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -517,10 +515,6 @@ server.tool(
     diagnosis: z.string().describe("The medical diagnosis or condition to look up"),
   },
   async ({ diagnosis }) => {
-    // LOG: Tool was actually called!
-    console.error(`[MCP TOOL CALLED] lookup_icd10_code called with diagnosis: "${diagnosis}"`);
-    console.error(`[MCP DEBUG] Full arguments received:`, JSON.stringify({ diagnosis }, null, 2));
-    
     // Handle case where task_progress might be passed (Cline sometimes adds extra args)
     let cleanDiagnosis: string;
     if (typeof diagnosis === 'string') {
@@ -537,8 +531,6 @@ server.tool(
     if (ICD10_CODES[diagnosisLower]) {
       const timestamp = new Date().toISOString();
       const toolCallId = `MCP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      console.error(`[MCP TOOL RESULT] Exact match found: ${ICD10_CODES[diagnosisLower].code}`);
-      console.error(`[MCP TOOL CALL ID] ${toolCallId}`);
       return {
         content: [{
           type: "text",
@@ -563,8 +555,6 @@ server.tool(
       if (key.length <= 10 && diagnosisLower.includes(key)) {
         const timestamp = new Date().toISOString();
         const toolCallId = `MCP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        console.error(`[MCP TOOL RESULT] Acronym match found: ${value.code} (${key})`);
-        console.error(`[MCP TOOL CALL ID] ${toolCallId}`);
         return {
           content: [{
             type: "text",
@@ -627,10 +617,8 @@ server.tool(
     }
     
     if (bestMatch && bestScore > 0) {
-      console.error(`[MCP TOOL RESULT] Found match: ${bestMatch.code} for "${diagnosis}"`);
       const timestamp = new Date().toISOString();
       const toolCallId = `MCP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      console.error(`[MCP TOOL CALL ID] ${toolCallId}`);
       return {
         content: [{
           type: "text",
@@ -656,11 +644,8 @@ server.tool(
       };
     }
     
-    console.error(`[MCP TOOL RESULT] No match found, using AI fallback for "${cleanDiagnosis}"`);
-    
     const timestamp = new Date().toISOString();
     const toolCallId = `MCP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    console.error(`[MCP TOOL CALL ID] ${toolCallId}`);
     
     // Fallback to AI
     const aiResponse = await callOumiModel(
