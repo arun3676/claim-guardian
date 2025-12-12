@@ -4,6 +4,8 @@
  * Custom Model Context Protocol server for medical billing automation
  * 
  * KEY DIFFERENTIATOR: Integrates with our fine-tuned Oumi model!
+ * 
+ * Built for AssembleHack25 - Cline Integration
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
