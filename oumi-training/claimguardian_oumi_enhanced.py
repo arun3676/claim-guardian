@@ -1,6 +1,5 @@
 """
 ClaimGuardian AI - Enhanced Oumi Implementation
-AssembleHack25 - Iron Intelligence Award ($3,000)
 
 This notebook adds:
 1. LLM-as-a-Judge for medical billing model evaluation
@@ -498,7 +497,7 @@ def generate_evaluation_report():
     
     report = """
 # ClaimGuardian AI - Oumi Evaluation Report
-## AssembleHack25 - Iron Intelligence Award Submission
+## ClaimGuardian AI - Oumi Evaluation Report
 
 **Date**: {date}
 **Model**: arungenailab/claimguardian-medical-billing-v2
@@ -609,7 +608,7 @@ ClaimGuardian AI demonstrates comprehensive use of Oumi's capabilities:
 3. **HallOumi**: Integrated claim verification for trustworthy AI outputs
 4. **Real-World Impact**: Addresses $100B+ medical billing error problem
 
-**Prize Eligibility**: ✅ Meets all requirements for Iron Intelligence Award ($3,000)
+**Model Status**: ✅ Production ready with comprehensive evaluation
 
 ---
 
@@ -631,7 +630,7 @@ def main():
     """Run all Oumi enhancements"""
     print("=" * 70)
     print("🏥 ClaimGuardian AI - Oumi Enhancement Pipeline")
-    print("   AssembleHack25 - Iron Intelligence Award ($3,000)")
+    print("   ClaimGuardian AI - Oumi Enhancement Pipeline")
     print("=" * 70)
     
     # Step 1: Create evaluation dataset
