@@ -223,13 +223,148 @@ const BILLING_RULES: BillingRule[] = [
 ];
 
 // =============================================================================
+// CLAIM VALIDATION LOGIC
+// =============================================================================
+interface ValidationResult {
+  valid: boolean;
+  errors: string[];
+  suggestions: string[];
+  claimId: string;
+  analysis: {
+    validCodes: string[];
+    invalidCodes: string[];
+    appropriateMatches: number;
+    totalChecks: number;
+  };
+}
+
+function validateInsuranceClaim(claimId: string, cptCodes: string[], diagnosisCodes: string[]): ValidationResult {
+  const errors: string[] = [];
+  const suggestions: string[] = [];
+  const validCodes: string[] = [];
+  const invalidCodes: string[] = [];
+  let appropriateMatches = 0;
+  let totalChecks = 0;
+
+  // Medical appropriateness mapping
+  const medicalMappings: Record<string, string[]> = {
+    // Diagnosis categories -> Appropriate procedure categories
+    "Cardiovascular": ["Cardiology"],
+    "Respiratory": ["Respiratory"],
+    "Gastrointestinal": ["Gastroenterology"],
+    "Musculoskeletal": ["Orthopedics"],
+    "Endocrine": ["Endocrine"],
+    "Mental Health": ["Mental Health"],
+    "Symptoms": ["E/M", "Radiology"], // Symptoms can have broad procedures
+  };
+
+  // Validate CPT codes exist
+  for (const cptCode of cptCodes) {
+    const procedure = Object.values(CPT_CODES).find(p => p.code === cptCode);
+    if (!procedure) {
+      errors.push(`CPT code ${cptCode} not found in database`);
+      invalidCodes.push(cptCode);
+    } else {
+      validCodes.push(cptCode);
+    }
+  }
+
+  // Validate ICD-10 codes exist
+  const validDiagnoses: string[] = [];
+  for (const icdCode of diagnosisCodes) {
+    const diagnosis = Object.values(ICD10_CODES).find(d => d.code === icdCode);
+    if (!diagnosis) {
+      errors.push(`ICD-10 code ${icdCode} not found in database`);
+    } else {
+      validDiagnoses.push(icdCode);
+    }
+  }
+
+  // Cross-reference medical appropriateness
+  for (const cptCode of validCodes) {
+    const procedure = Object.values(CPT_CODES).find(p => p.code === cptCode);
+    if (!procedure) continue;
+
+    for (const icdCode of validDiagnoses) {
+      const diagnosis = Object.values(ICD10_CODES).find(d => d.code === icdCode);
+      if (!diagnosis) continue;
+
+      totalChecks++;
+
+      // Check if procedure category matches diagnosis category
+      const appropriateCategories = medicalMappings[diagnosis.category] || [];
+      if (appropriateCategories.includes(procedure.category)) {
+        appropriateMatches++;
+      } else {
+        // Check for special cases
+        let isAppropriate = false;
+
+        // Radiology can be appropriate for many diagnoses
+        if (procedure.category === "Radiology" && ["Cardiovascular", "Respiratory", "Gastrointestinal", "Musculoskeletal"].includes(diagnosis.category)) {
+          isAppropriate = true;
+        }
+
+        // E/M visits can be appropriate for any diagnosis
+        if (procedure.category === "E/M") {
+          isAppropriate = true;
+        }
+
+        // Laboratory can be appropriate for many conditions
+        if (procedure.category === "Laboratory" && ["Endocrine", "Cardiovascular", "Gastrointestinal"].includes(diagnosis.category)) {
+          isAppropriate = true;
+        }
+
+        if (!isAppropriate) {
+          errors.push(`CPT ${cptCode} (${procedure.category}) may not be medically appropriate for diagnosis ${icdCode} (${diagnosis.category})`);
+          suggestions.push(`Consider if ${procedure.description} is truly indicated for ${diagnosis.description}`);
+        } else {
+          appropriateMatches++;
+        }
+      }
+    }
+  }
+
+  // Check for missing primary diagnosis
+  if (validDiagnoses.length === 0) {
+    errors.push("No valid diagnosis codes found - claim requires at least one valid ICD-10 code");
+  }
+
+  // Check for missing procedures
+  if (validCodes.length === 0) {
+    errors.push("No valid procedure codes found - claim requires at least one valid CPT code");
+  }
+
+  // Generate suggestions for invalid codes
+  if (invalidCodes.length > 0) {
+    suggestions.push("Verify CPT codes against current AMA CPT manual");
+    suggestions.push("Check for updated procedure codes if services were recent");
+  }
+
+  // Overall validity
+  const valid = errors.length === 0 && validCodes.length > 0 && validDiagnoses.length > 0;
+
+  return {
+    valid,
+    errors,
+    suggestions,
+    claimId,
+    analysis: {
+      validCodes,
+      invalidCodes,
+      appropriateMatches,
+      totalChecks
+    }
+  };
+}
+
+// =============================================================================
 // HELPER: Call HuggingFace Model
 // =============================================================================
 async function callOumiModel(prompt: string, hfToken?: string): Promise<string> {
   if (!hfToken) {
     return "Model inference requires HuggingFace API token. Set HF_TOKEN environment variable.";
   }
-  
+
   try {
     const response = await fetch(HF_API_URL, {
       method: "POST",
@@ -246,12 +381,12 @@ async function callOumiModel(prompt: string, hfToken?: string): Promise<string> 
         }
       })
     });
-    
+
     if (!response.ok) {
       const error = await response.text();
       return `Model API error: ${error}`;
     }
-    
+
     const result = await response.json();
     if (Array.isArray(result) && result[0]?.generated_text) {
       const fullText = result[0].generated_text;
@@ -1021,6 +1156,50 @@ server.tool(
 );
 
 // =============================================================================
+// TOOL 7: Insurance Claim Validation
+// =============================================================================
+server.tool(
+  "validate_insurance_claim",
+  "Validate an insurance claim by cross-referencing CPT procedure codes with ICD-10 diagnosis codes for medical appropriateness.",
+  {
+    claimId: z.string().describe("Unique identifier for the insurance claim"),
+    cptCodes: z.array(z.string()).describe("List of CPT procedure codes on the claim"),
+    diagnosisCodes: z.array(z.string()).describe("List of ICD-10 diagnosis codes for the patient"),
+  },
+  async ({ claimId, cptCodes, diagnosisCodes }) => {
+    const result = validateInsuranceClaim(claimId, cptCodes, diagnosisCodes);
+
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          validation_timestamp: new Date().toISOString(),
+          claim_validation: result,
+          summary: {
+            status: result.valid ? "VALID" : "INVALID",
+            error_count: result.errors.length,
+            suggestion_count: result.suggestions.length,
+            appropriateness_score: result.analysis.totalChecks > 0
+              ? `${((result.analysis.appropriateMatches / result.analysis.totalChecks) * 100).toFixed(1)}%`
+              : "N/A"
+          },
+          next_steps: result.valid ? [
+            "Claim appears medically appropriate",
+            "Proceed with billing submission",
+            "Ensure all documentation supports codes used"
+          ] : [
+            "Review and correct identified issues",
+            "Verify medical necessity documentation",
+            "Consider consulting with coding specialist",
+            "May need to revise procedure or diagnosis codes"
+          ]
+        }, null, 2)
+      }]
+    };
+  }
+);
+
+// =============================================================================
 // START THE SERVER
 // =============================================================================
 async function main() {
@@ -1029,7 +1208,7 @@ async function main() {
   console.error("ClaimGuardian MCP Server v2.0 running");
   console.error(`HuggingFace Model: ${HF_MODEL_ID}`);
   console.error(`HF Token: ${HF_TOKEN ? "Configured" : "Not set - AI features limited"}`);
-  console.error(`Available tools: lookup_cpt_code, lookup_icd10_code, detect_billing_errors, generate_appeal_letter, check_coverage, generate_bill_report`);
+  console.error(`Available tools: lookup_cpt_code, lookup_icd10_code, detect_billing_errors, generate_appeal_letter, calculate_medicare_rate, generate_bill_report, validate_insurance_claim`);
 }
 
 main().catch(console.error);
