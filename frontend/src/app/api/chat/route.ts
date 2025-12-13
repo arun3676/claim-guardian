@@ -1,24 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
- * Chat API Route - Placeholder for future chat functionality
+ * Chat API Route - Redirects to the main AI chat endpoint
  * 
- * This endpoint is reserved for future chat/streaming features.
- * Currently not implemented as the main application uses MCP tools
- * through the /api/mcp/claimguardian endpoints.
+ * This is a compatibility route. The main streaming chat is at /api/ai/chat
  * 
- * To implement:
- * 1. Configure AI model (OpenAI, Anthropic, etc.)
- * 2. Set up streaming response
- * 3. Add authentication/rate limiting
+ * Available AI endpoints:
+ * - /api/ai/chat - Streaming chat with multiple providers
+ * - /api/ai/analyze - Full bill analysis workflow with streaming
+ * - /api/oumi/predict - Oumi fine-tuned model predictions
  */
 export async function POST(req: NextRequest) {
-  return NextResponse.json(
-    { 
-      error: 'Chat endpoint not yet implemented',
-      message: 'Please use the MCP tool endpoints for medical billing analysis'
+  // Forward to the main AI chat endpoint
+  const body = await req.json();
+  
+  const aiChatUrl = new URL('/api/ai/chat', req.url);
+  const response = await fetch(aiChatUrl.toString(), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
     },
-    { status: 501 } // 501 Not Implemented
-  );
+    body: JSON.stringify(body),
+  });
+  
+  // Return the streaming response
+  return new Response(response.body, {
+    status: response.status,
+    headers: response.headers,
+  });
+}
+
+export async function GET() {
+  return NextResponse.json({
+    message: 'ClaimGuardian AI Chat Endpoints',
+    endpoints: {
+      '/api/ai/chat': 'Streaming chat with OpenAI/Anthropic',
+      '/api/ai/analyze': 'Full bill analysis workflow',
+      '/api/oumi/predict': 'Oumi fine-tuned model',
+      '/api/mcp/claimguardian/*': 'MCP tool endpoints',
+    },
+  });
 }
 
