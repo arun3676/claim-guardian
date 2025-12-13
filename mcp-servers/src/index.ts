@@ -1207,6 +1207,119 @@ server.tool(
 );
 
 // =============================================================================
+// TOOL 8: Trigger Kestra Workflow
+// =============================================================================
+server.tool(
+  "trigger_kestra_workflow",
+  "Trigger a Kestra workflow for bill analysis. This integrates with Kestra's AI Agent workflows to analyze medical bills using advanced AI capabilities.",
+  {
+    workflowId: z.string().describe("Kestra workflow ID to execute (e.g., 'claimguardian-ai-agent-summarizer', 'claimguardian-webhook-trigger')"),
+    namespace: z.string().optional().describe("Kestra namespace (default: 'claimguardian')"),
+    billData: z.object({
+      patient: z.object({
+        name: z.string().optional(),
+        id: z.string().optional(),
+      }).optional(),
+      procedures: z.array(z.object({
+        cpt_code: z.string().optional(),
+        description: z.string(),
+        billed_amount: z.number(),
+        date: z.string().optional(),
+      })),
+      diagnoses: z.array(z.object({
+        icd10_code: z.string().optional(),
+        description: z.string(),
+      })).optional(),
+      total_billed: z.number(),
+      insurance: z.object({
+        company: z.string().optional(),
+        policy_number: z.string().optional(),
+      }).optional(),
+    }).describe("Medical bill data to analyze"),
+  },
+  async ({ workflowId, namespace, billData }) => {
+    try {
+      const kestraApiUrl = process.env.KESTRA_API_URL || 'http://localhost:8080';
+      const kestraNamespace = namespace || 'claimguardian';
+      
+      // Prepare execution request
+      const executionRequest = {
+        inputs: {
+          bill_data: billData,
+        },
+        labels: {
+          source: 'mcp_server',
+          tool: 'trigger_kestra_workflow',
+        },
+      };
+
+      // Call Kestra API to execute workflow
+      const response = await fetch(
+        `${kestraApiUrl}/api/v1/executions/${kestraNamespace}/${workflowId}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(process.env.KESTRA_API_KEY && {
+              'Authorization': `Bearer ${process.env.KESTRA_API_KEY}`,
+            }),
+          },
+          body: JSON.stringify(executionRequest),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Kestra API error: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+
+      const execution = await response.json();
+
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            success: true,
+            message: `Kestra workflow '${workflowId}' triggered successfully`,
+            execution: {
+              id: execution.id,
+              namespace: execution.namespace,
+              flowId: execution.flowId,
+              state: execution.state?.current || 'CREATED',
+              startDate: execution.startDate,
+            },
+            next_steps: [
+              `Check execution status: GET ${kestraApiUrl}/api/v1/executions/${execution.id}`,
+              `View results: GET ${kestraApiUrl}/api/v1/executions/${execution.id}/outputs`,
+              `Monitor in Kestra UI: ${kestraApiUrl}/ui/executions/${execution.id}`,
+            ],
+            note: "Workflow execution is asynchronous. Use the execution ID to check status and retrieve results.",
+          }, null, 2)
+        }]
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            success: false,
+            error: "Failed to trigger Kestra workflow",
+            message: errorMessage,
+            troubleshooting: [
+              "Ensure Kestra server is running and accessible",
+              "Check KESTRA_API_URL environment variable",
+              "Verify workflow ID and namespace are correct",
+              "Ensure KESTRA_API_KEY is set if authentication is required",
+            ],
+          }, null, 2)
+        }]
+      };
+    }
+  }
+);
+
+// =============================================================================
 // START THE SERVER
 // =============================================================================
 async function main() {
@@ -1215,7 +1328,7 @@ async function main() {
   console.error("ClaimGuardian MCP Server v2.0 running");
   console.error(`HuggingFace Model: ${HF_MODEL_ID}`);
   console.error(`HF Token: ${HF_TOKEN ? "Configured" : "Not set - AI features limited"}`);
-  console.error(`Available tools: lookup_cpt_code, lookup_icd10_code, detect_billing_errors, generate_appeal_letter, calculate_medicare_rate, generate_bill_report, validate_insurance_claim`);
+  console.error(`Available tools: lookup_cpt_code, lookup_icd10_code, detect_billing_errors, generate_appeal_letter, calculate_medicare_rate, generate_bill_report, validate_insurance_claim, trigger_kestra_workflow`);
 }
 
 main().catch(console.error);

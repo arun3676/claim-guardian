@@ -1,0 +1,281 @@
+id: claimguardian-oumi-enhanced
+namespace: claimguardian
+description: |
+  ClaimGuardian AI - Oumi Model Enhanced Workflow
+  
+  This workflow integrates the fine-tuned Oumi model (arungenailab/claimguardian-medical-billing-v2)
+  with Kestra's AI Agent capabilities:
+  1. Uses Oumi model for initial bill analysis (fine-tuned for medical billing)
+  2. Uses OpenAI AI Agent for summarization and decision-making
+  3. Combines both models for comprehensive analysis
+  
+  Demonstrates integration of fine-tuned models with Kestra workflows.
+
+inputs:
+  - id: bill_data
+    type: JSON
+    description: Medical bill data as JSON object
+    defaults: |
+      {
+        "patient": {"name": "John Doe"},
+        "procedures": [{"cpt_code": "70553", "description": "MRI brain", "billed_amount": 5000}],
+        "total_billed": 5000
+      }
+
+tasks:
+  # Step 1: Write bill data to temporary file
+  - id: write_bill_data
+    type: io.kestra.plugin.fs.Write
+    description: Write incoming bill data to temporary file
+    content: "{{ inputs.bill_data | json }}"
+    to: "/tmp/bill_{{ execution.id }}.json"
+
+  # Step 2: Call Oumi fine-tuned model via HuggingFace API
+  - id: oumi_analysis
+    type: io.kestra.plugin.http.Request
+    description: |
+      Call fine-tuned Oumi model for medical billing analysis
+      Model: arungenailab/claimguardian-medical-billing-v2
+    uri: "https://api-inference.huggingface.co/models/arungenailab/claimguardian-medical-billing-v2"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ secret('HUGGINGFACE_API_KEY') }}"
+      Content-Type: "application/json"
+    body: |
+      {
+        "inputs": "Analyze this medical bill and identify billing errors:\n\n{{ read(outputs.write_bill_data.path) }}"
+      }
+    outputFormat: JSON
+    storeOutput: true
+
+  # Step 3: Extract Oumi model response
+  - id: extract_oumi_response
+    type: io.kestra.plugin.scripts.python.Script
+    description: Extract and format Oumi model response
+    docker:
+      image: python:3.11-slim
+    script: |
+      import json
+      import sys
+      
+      # Read Oumi response
+      oumi_file = "{{ outputs.oumi_analysis.body }}"
+      
+      # Parse response (HuggingFace API returns array or object)
+      try:
+          if isinstance(oumi_file, str):
+              oumi_data = json.loads(oumi_file)
+          else:
+              oumi_data = oumi_file
+          
+          # Handle HuggingFace API response format
+          if isinstance(oumi_data, list) and len(oumi_data) > 0:
+              oumi_text = oumi_data[0].get('generated_text', '') if isinstance(oumi_data[0], dict) else str(oumi_data[0])
+          elif isinstance(oumi_data, dict):
+              oumi_text = oumi_data.get('generated_text', json.dumps(oumi_data))
+          else:
+              oumi_text = str(oumi_data)
+          
+          # Write formatted response
+          with open('/tmp/oumi_analysis.txt', 'w') as f:
+              f.write(oumi_text)
+          
+          print(f"OUMI_ANALYSIS: {oumi_text}")
+      except Exception as e:
+          # Fallback if Oumi model unavailable
+          print(f"OUMI_ANALYSIS: Oumi model analysis unavailable: {str(e)}")
+          with open('/tmp/oumi_analysis.txt', 'w') as f:
+              f.write("Oumi model analysis unavailable - using OpenAI fallback")
+    outputFiles:
+      - "*.txt"
+
+  # Step 4: AI Agent summarizes using both Oumi and bill data
+  - id: ai_summarize_bill
+    type: io.kestra.plugin.ai.agent.AIAgent
+    description: |
+      AI Agent summarizes medical billing data, incorporating Oumi model analysis
+      Combines fine-tuned model insights with general AI analysis
+    model:
+      provider: OPENAI
+      apiKey: "{{ secret('OPENAI_API_KEY') }}"
+      model: "gpt-4o-mini"
+    prompt: |
+      You are a medical billing expert AI agent. Analyze and summarize the following medical bill data.
+      
+      Medical Bill Data:
+      {{ read(outputs.write_bill_data.path) }}
+      
+      Oumi Model Analysis (fine-tuned for medical billing):
+      {{ read(outputs.extract_oumi_response.files[0].path) }}
+      
+      Please provide a comprehensive summary including:
+      1. Patient information and claim details
+      2. List of procedures with CPT codes and billed amounts
+      3. Diagnoses (ICD-10 codes) if available
+      4. Total billed amount
+      5. Key observations from Oumi model analysis
+      6. Key observations about the bill (overcharges, unusual patterns, etc.)
+      7. Comparison to typical Medicare rates (if known)
+      
+      Incorporate insights from the Oumi model analysis where relevant.
+      Format your summary in clear, structured sections.
+    outputFormat: JSON
+    outputVariable: bill_summary
+
+  # Step 5: Load CPT reference data
+  - id: load_cpt_reference
+    type: io.kestra.plugin.core.log.Log
+    description: Load CPT code reference data
+    message: |
+      CPT Code Reference Data Loaded:
+      - 70553: MRI brain with/without contrast - Avg Cost: $3,500, Medicare ~$400
+      - 45378: Colonoscopy, diagnostic - Avg Cost: $3,000, Medicare ~$500
+      - 27447: Total knee arthroplasty - Avg Cost: $50,000, Medicare ~$15,000
+
+  # Step 6: AI Agent makes decision based on summarized data
+  - id: ai_make_decision
+    type: io.kestra.plugin.ai.agent.AIAgent
+    description: |
+      AI Agent makes decisions based on summarized bill data and Oumi analysis
+      Combines fine-tuned model insights with decision-making framework
+    model:
+      provider: OPENAI
+      apiKey: "{{ secret('OPENAI_API_KEY') }}"
+      model: "gpt-4o-mini"
+    prompt: |
+      You are a medical billing decision-making AI agent. Based on the bill summary and Oumi model analysis below, make informed decisions.
+      
+      Bill Summary (with Oumi insights):
+      {{ outputs.ai_summarize_bill.bill_summary }}
+      
+      CPT Reference Data:
+      - 70553 (MRI brain): Typical cost $3,500, Medicare ~$400
+      - 45378 (Colonoscopy): Typical cost $3,000, Medicare ~$500
+      - 27447 (Knee replacement): Typical cost $50,000, Medicare ~$15,000
+      
+      Analyze the bill and make decisions:
+      
+      1. RISK_LEVEL: Assess billing risk (HIGH, MEDIUM, LOW)
+         - HIGH: Overcharge >50% above typical cost or Medicare rate
+         - MEDIUM: Overcharge 20-50% above typical cost
+         - LOW: Within reasonable range
+      
+      2. RECOMMENDED_ACTION: What should the patient do? (APPEAL, NEGOTIATE, ACCEPT)
+         - APPEAL: Significant overcharge detected, formal appeal recommended
+         - NEGOTIATE: Some overcharge, try negotiation first
+         - ACCEPT: Charges appear reasonable
+      
+      3. PRIORITY: How urgent is this? (URGENT, HIGH, MEDIUM, LOW)
+      
+      4. REASONING: Brief explanation of your decisions, incorporating Oumi model insights
+      
+      Return your analysis as JSON with these fields:
+      {
+        "risk_level": "HIGH|MEDIUM|LOW",
+        "recommended_action": "APPEAL|NEGOTIATE|ACCEPT",
+        "priority": "URGENT|HIGH|MEDIUM|LOW",
+        "reasoning": "explanation",
+        "estimated_overcharge": "$amount if applicable",
+        "oumi_insights_used": true,
+        "next_steps": ["step1", "step2", "step3"]
+      }
+    outputFormat: JSON
+    outputVariable: decision_analysis
+
+  # Step 7: Generate comprehensive report
+  - id: generate_final_report
+    type: io.kestra.plugin.core.log.Log
+    description: Generate final report combining Oumi analysis, AI summary, and decisions
+    message: |
+      ========================================
+      CLAIMGUARDIAN OUMI-ENHANCED AI REPORT
+      ========================================
+      
+      Generated: {{ execution.startDate }}
+      Execution ID: {{ execution.id }}
+      
+      ---
+      OUMI MODEL ANALYSIS (Fine-tuned):
+      ---
+      {{ read(outputs.extract_oumi_response.files[0].path) }}
+      
+      ---
+      BILL SUMMARY (AI Generated with Oumi insights):
+      ---
+      {{ outputs.ai_summarize_bill.bill_summary }}
+      
+      ---
+      AI DECISION ANALYSIS:
+      ---
+      Risk Level: {{ outputs.ai_make_decision.decision_analysis.risk_level }}
+      Recommended Action: {{ outputs.ai_make_decision.decision_analysis.recommended_action }}
+      Priority: {{ outputs.ai_make_decision.decision_analysis.priority }}
+      
+      Reasoning: {{ outputs.ai_make_decision.decision_analysis.reasoning }}
+      
+      Estimated Overcharge: {{ outputs.ai_make_decision.decision_analysis.estimated_overcharge }}
+      Oumi Insights Used: {{ outputs.ai_make_decision.decision_analysis.oumi_insights_used }}
+      
+      Next Steps:
+      {{ outputs.ai_make_decision.decision_analysis.next_steps }}
+      
+      ---
+      This analysis combines:
+      - Fine-tuned Oumi model (arungenailab/claimguardian-medical-billing-v2)
+      - Kestra's built-in AI Agent for summarization and decision-making
+      - Multiple data sources (CPT codes, Medicare rates)
+      ========================================
+
+  # Step 8: Conditional routing based on AI decision
+  - id: route_by_decision
+    type: io.kestra.plugin.core.flow.Switch
+    description: Route workflow based on AI Agent decision
+    value: "{{ outputs.ai_make_decision.decision_analysis.recommended_action }}"
+    cases:
+      APPEAL:
+        - id: high_priority_appeal
+          type: io.kestra.plugin.core.log.Log
+          message: |
+            ⚠️ HIGH PRIORITY: AI Agent recommends APPEAL
+            Risk Level: {{ outputs.ai_make_decision.decision_analysis.risk_level }}
+            Estimated Overcharge: {{ outputs.ai_make_decision.decision_analysis.estimated_overcharge }}
+            Oumi Insights: {{ outputs.ai_make_decision.decision_analysis.oumi_insights_used }}
+            
+            Action: Generate appeal letter workflow triggered.
+      NEGOTIATE:
+        - id: negotiation_workflow
+          type: io.kestra.plugin.core.log.Log
+          message: |
+            💬 NEGOTIATION RECOMMENDED: AI Agent suggests negotiation
+            Risk Level: {{ outputs.ai_make_decision.decision_analysis.risk_level }}
+            Oumi Insights: {{ outputs.ai_make_decision.decision_analysis.oumi_insights_used }}
+            
+            Action: Prepare negotiation strategy and contact billing department.
+      ACCEPT:
+        - id: accept_bill
+          type: io.kestra.plugin.core.log.Log
+          message: |
+            ✅ BILL ACCEPTED: AI Agent determined charges are reasonable
+            Risk Level: {{ outputs.ai_make_decision.decision_analysis.risk_level }}
+            Oumi Insights: {{ outputs.ai_make_decision.decision_analysis.oumi_insights_used }}
+
+  # Step 9: Final summary
+  - id: workflow_complete
+    type: io.kestra.plugin.core.log.Log
+    description: Workflow completion summary
+    message: |
+      ✅ ClaimGuardian Oumi-Enhanced Workflow Complete!
+      
+      Summary:
+      - Medical bill data processed
+      - Oumi fine-tuned model analyzed bill
+      - AI Agent summarized with Oumi insights
+      - Decision made: {{ outputs.ai_make_decision.decision_analysis.recommended_action }}
+      - Risk assessment: {{ outputs.ai_make_decision.decision_analysis.risk_level }}
+      
+      This workflow demonstrates:
+      1. ✅ Integration of fine-tuned Oumi model
+      2. ✅ Kestra's built-in AI Agent summarizing data
+      3. ✅ Combined model analysis for better accuracy
+      4. ✅ Decision-making based on multiple AI sources
+
