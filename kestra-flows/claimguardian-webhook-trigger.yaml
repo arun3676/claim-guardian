@@ -47,10 +47,10 @@ tasks:
       - CPT codes and descriptions
       - Medicare rate comparisons
       - Insurance claim information
-    model:
-      provider: OPENAI
+    provider:
+      type: io.kestra.plugin.ai.provider.OpenAI
       apiKey: "{{ secret('OPENAI_API_KEY') }}"
-      model: "gpt-4o-mini"
+      modelName: gpt-4o-mini
     prompt: |
       You are a medical billing expert AI agent. Analyze and summarize the following medical bill data.
       
@@ -88,10 +88,10 @@ tasks:
       - Risk level assessment (HIGH, MEDIUM, LOW)
       - Appeal recommendation (APPEAL, NEGOTIATE, ACCEPT)
       - Priority level for action
-    model:
-      provider: OPENAI
+    provider:
+      type: io.kestra.plugin.ai.provider.OpenAI
       apiKey: "{{ secret('OPENAI_API_KEY') }}"
-      model: "gpt-4o-mini"
+      modelName: gpt-4o-mini
     prompt: |
       You are a medical billing decision-making AI agent. Based on the bill summary below, make informed decisions.
       

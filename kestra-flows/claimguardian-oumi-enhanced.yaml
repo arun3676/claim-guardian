@@ -95,10 +95,10 @@ tasks:
     description: |
       AI Agent summarizes medical billing data, incorporating Oumi model analysis
       Combines fine-tuned model insights with general AI analysis
-    model:
-      provider: OPENAI
+    provider:
+      type: io.kestra.plugin.ai.provider.OpenAI
       apiKey: "{{ secret('OPENAI_API_KEY') }}"
-      model: "gpt-4o-mini"
+      modelName: gpt-4o-mini
     prompt: |
       You are a medical billing expert AI agent. Analyze and summarize the following medical bill data.
       
@@ -138,10 +138,10 @@ tasks:
     description: |
       AI Agent makes decisions based on summarized bill data and Oumi analysis
       Combines fine-tuned model insights with decision-making framework
-    model:
-      provider: OPENAI
+    provider:
+      type: io.kestra.plugin.ai.provider.OpenAI
       apiKey: "{{ secret('OPENAI_API_KEY') }}"
-      model: "gpt-4o-mini"
+      modelName: gpt-4o-mini
     prompt: |
       You are a medical billing decision-making AI agent. Based on the bill summary and Oumi model analysis below, make informed decisions.
       

@@ -1,0 +1,14 @@
+kestra:
+  server:
+    basic-auth:
+      enabled: true
+      username: "admin@kestra.io"
+      password: Kestra123
+    cors:
+      enabled: true
+      allowed-origins:
+        - http://localhost:3000
+        - https://*.vercel.app
+  encryption:
+    secret-key: "NWRhUDc5TERVY2QyMDhSSHhfeWYzbjJpNE5vb3M5NnY="
+

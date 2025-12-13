@@ -1,0 +1,101 @@
+version: "3.8"
+
+volumes:
+  postgres-data:
+  kestra-data:
+  kestra-wd:
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: claimguardian-postgres
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: kestra
+      POSTGRES_USER: kestra
+      POSTGRES_PASSWORD: k3str4
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d kestra -U kestra"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+    restart: unless-stopped
+
+  kestra:
+    image: kestra/kestra:latest
+    pull_policy: always
+    container_name: claimguardian-kestra
+    user: "root"
+    command: server standalone --worker-thread=128
+    volumes:
+      - kestra-data:/app/storage
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp/kestra-wd:/tmp/kestra-wd
+    environment:
+      # ============================================
+      # IMPORTANT: Replace these with YOUR base64-encoded API keys!
+      # 
+      # To encode your key, run in PowerShell:
+      #   [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("sk-your-key"))
+      #
+      # Or in bash:
+      #   echo -n 'sk-your-key' | base64
+      # ============================================
+      SECRET_OPENAI_API_KEY: "${OPENAI_API_KEY_BASE64}"
+      SECRET_HUGGINGFACE_API_KEY: "${HUGGINGFACE_API_KEY_BASE64}"
+      
+      KESTRA_CONFIGURATION: |
+        datasources:
+          postgres:
+            url: jdbc:postgresql://postgres:5432/kestra
+            driverClassName: org.postgresql.Driver
+            username: kestra
+            password: k3str4
+        kestra:
+          server:
+            basic-auth:
+              enabled: true
+              username: "admin@kestra.io"
+              password: "Kestra2025!"
+          repository:
+            type: postgres
+          storage:
+            type: local
+            local:
+              base-path: "/app/storage"
+          queue:
+            type: postgres
+          encryption:
+            secret-key: "NWRhUDc5TERWY2QyMDhSSHhfeWYzbjJpNE5vb3M5NnY="
+          plugins:
+            repositories:
+              central:
+                url: https://repo.maven.apache.org/maven2/
+        micronaut:
+          server:
+            cors:
+              enabled: true
+              configurations:
+                all:
+                  allowedOrigins:
+                    - "https://claimguardian.vercel.app"
+                    - "https://*.vercel.app"
+                    - "http://localhost:3000"
+                    - "http://localhost:8080"
+                  allowedMethods:
+                    - GET
+                    - POST
+                    - PUT
+                    - DELETE
+                    - OPTIONS
+                  allowedHeaders:
+                    - "*"
+                  allowCredentials: true
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped

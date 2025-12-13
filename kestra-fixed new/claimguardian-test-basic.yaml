@@ -1,0 +1,76 @@
+id: claimguardian-test-basic
+namespace: hackathon
+description: |
+  ClaimGuardian - Basic Test Workflow
+  
+  This workflow does NOT require any API keys.
+  Use it to verify Kestra is working before testing AI Agent workflows.
+
+inputs:
+  - id: patient_name
+    type: STRING
+    defaults: "Test Patient"
+    description: Patient name
+    
+  - id: billed_amount
+    type: INT
+    defaults: 5000
+    description: Billed amount
+
+tasks:
+  - id: log_input
+    type: io.kestra.plugin.core.log.Log
+    message: |
+      ========================================
+      KESTRA TEST - INPUT RECEIVED
+      ========================================
+      Patient: {{ inputs.patient_name }}
+      Billed: ${{ inputs.billed_amount }}
+      Execution ID: {{ execution.id }}
+      ========================================
+
+  - id: calculate_analysis
+    type: io.kestra.plugin.scripts.shell.Commands
+    commands:
+      - |
+        BILLED={{ inputs.billed_amount }}
+        EXPECTED=3500
+        VARIANCE=$((($BILLED - $EXPECTED) * 100 / $EXPECTED))
+        echo "=========================================="
+        echo "BILLING ANALYSIS (No AI)"
+        echo "=========================================="
+        echo "Billed Amount: \$$BILLED"
+        echo "Expected (MRI): \$$EXPECTED"
+        echo "Variance: $VARIANCE%"
+        echo ""
+        if [ $VARIANCE -gt 50 ]; then
+          echo "RISK LEVEL: HIGH"
+          echo "RECOMMENDED ACTION: APPEAL"
+        elif [ $VARIANCE -gt 20 ]; then
+          echo "RISK LEVEL: MEDIUM"
+          echo "RECOMMENDED ACTION: NEGOTIATE"
+        else
+          echo "RISK LEVEL: LOW"
+          echo "RECOMMENDED ACTION: ACCEPT"
+        fi
+        echo "=========================================="
+
+  - id: workflow_complete
+    type: io.kestra.plugin.core.log.Log
+    message: |
+      ========================================
+      ✅ KESTRA TEST COMPLETE!
+      ========================================
+      
+      If you see this message, Kestra is working correctly.
+      
+      Next: Upload the AI Agent workflows:
+      - claimguardian-ai-agent-complete.yaml
+      - claimguardian-ai-summarizer.yaml
+      
+      ========================================
+
+outputs:
+  - id: status
+    type: STRING
+    value: "SUCCESS"

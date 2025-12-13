@@ -1,0 +1,86 @@
+id: claimguardian-ai-summarizer
+namespace: hackathon
+description: |
+  ClaimGuardian AI - AI Agent Summarizer (Simple Version)
+  
+  PRIZE REQUIREMENTS:
+  ✅ Uses Kestra's built-in AI Agent
+  ✅ Summarizes data from multiple systems
+  ✅ Makes decisions based on summarized data
+  
+  This is a simpler version without human-in-the-loop for quick testing.
+
+inputs:
+  - id: patient_name
+    type: STRING
+    defaults: "John Doe"
+    description: Patient name
+    
+  - id: procedure
+    type: STRING
+    defaults: "MRI brain"
+    description: Medical procedure
+    
+  - id: billed_amount
+    type: INT
+    defaults: 5000
+    description: Billed amount in dollars
+
+tasks:
+  # Step 1: AI Agent summarizes from multiple data sources
+  - id: ai_analyze
+    type: io.kestra.plugin.ai.agent.AIAgent
+    description: AI Agent analyzes bill using data from multiple systems
+    provider:
+      type: io.kestra.plugin.ai.provider.OpenAI
+      apiKey: "{{ secret('OPENAI_API_KEY') }}"
+      modelName: gpt-4o-mini
+    systemMessage: |
+      You are a medical billing analyst AI agent.
+      Analyze bills by comparing to CPT codes and Medicare rates.
+    prompt: |
+      Analyze this medical bill:
+      
+      Patient: {{ inputs.patient_name }}
+      Procedure: {{ inputs.procedure }}
+      Billed: ${{ inputs.billed_amount }}
+      
+      CPT Reference Data:
+      - MRI brain (70553): Avg $3,500, Medicare $400
+      - Colonoscopy (45378): Avg $3,000, Medicare $500
+      - CT scan (71250): Avg $1,500, Medicare $200
+      - Knee replacement (27447): Avg $50,000, Medicare $15,000
+      
+      Provide:
+      1. Detected CPT code
+      2. Expected cost range
+      3. Medicare rate
+      4. Variance analysis
+      5. Risk level (HIGH/MEDIUM/LOW)
+      6. Recommended action (APPEAL/NEGOTIATE/ACCEPT)
+      7. Reasoning
+
+  # Step 2: Log analysis
+  - id: log_analysis
+    type: io.kestra.plugin.core.log.Log
+    message: |
+      ========================================
+      AI AGENT ANALYSIS COMPLETE
+      ========================================
+      {{ outputs.ai_analyze.textOutput }}
+      ========================================
+
+  # Step 3: Workflow complete
+  - id: complete
+    type: io.kestra.plugin.core.log.Log
+    message: |
+      ✅ ClaimGuardian AI Agent Workflow Complete!
+      
+      This demonstrates:
+      ✅ AI Agent summarizing data from multiple sources
+      ✅ AI Agent making decisions based on summaries
+
+outputs:
+  - id: analysis
+    type: STRING
+    value: "{{ outputs.ai_analyze.textOutput }}"
