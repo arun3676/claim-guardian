@@ -37,10 +37,10 @@ tasks:
     description: |
       Enhanced AI Agent with system message and memory capabilities
       Summarizes medical billing data from multiple sources
-    model:
-      provider: OPENAI
+    provider:
+      type: io.kestra.plugin.ai.provider.OpenAI
       apiKey: "{{ secret('OPENAI_API_KEY') }}"
-      model: "gpt-4o-mini"
+      modelName: gpt-4o-mini
     systemMessage: |
       You are a medical billing expert AI agent with deep knowledge of:
       - CPT codes and medical procedure pricing
@@ -87,10 +87,10 @@ tasks:
     description: |
       Enhanced AI Agent makes decisions based on summarized data
       Uses system message for consistent decision-making framework
-    model:
-      provider: OPENAI
+    provider:
+      type: io.kestra.plugin.ai.provider.OpenAI
       apiKey: "{{ secret('OPENAI_API_KEY') }}"
-      model: "gpt-4o-mini"
+      modelName: gpt-4o-mini
     systemMessage: |
       You are a medical billing decision-making AI agent.
       

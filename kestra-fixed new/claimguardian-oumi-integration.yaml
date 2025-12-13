@@ -1,0 +1,151 @@
+id: claimguardian-oumi-integration
+namespace: hackathon
+description: |
+  ClaimGuardian AI - Oumi + Kestra Multi-Model Integration
+  
+  SPONSOR INTEGRATIONS:
+  ✅ Kestra ($4K): Built-in AI Agent for summarization & decision-making
+  ✅ Oumi ($3K): Fine-tuned model integration
+  
+  This workflow demonstrates multi-model orchestration:
+  1. Calls Oumi fine-tuned model (arungenailab/claimguardian-medical-billing-v2)
+  2. Uses Kestra AI Agent for comprehensive analysis
+  3. Combines insights from both models
+
+inputs:
+  - id: patient_name
+    type: STRING
+    defaults: "John Doe"
+    description: Patient name
+    
+  - id: procedure
+    type: STRING
+    defaults: "MRI brain"
+    description: Medical procedure
+    
+  - id: billed_amount
+    type: INT
+    defaults: 5000
+    description: Billed amount
+
+tasks:
+  # Step 1: Call Oumi fine-tuned model via HuggingFace API
+  - id: oumi_model_call
+    type: io.kestra.plugin.core.http.Request
+    description: Call Oumi fine-tuned model for specialized medical billing analysis
+    uri: "https://api-inference.huggingface.co/models/arungenailab/claimguardian-medical-billing-v2"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ secret('HUGGINGFACE_API_KEY') }}"
+      Content-Type: "application/json"
+    body: |
+      {
+        "inputs": "Analyze medical bill: Patient={{ inputs.patient_name }}, Procedure={{ inputs.procedure }}, Billed=${{ inputs.billed_amount }}. Identify billing errors and recommend action."
+      }
+    allowFailed: true
+
+  # Step 2: Log Oumi response
+  - id: log_oumi
+    type: io.kestra.plugin.core.log.Log
+    description: Log Oumi model response
+    message: |
+      ========================================
+      OUMI MODEL RESPONSE
+      Model: arungenailab/claimguardian-medical-billing-v2
+      ========================================
+      Status: {{ outputs.oumi_model_call.code ?? 'N/A' }}
+      Response: {{ outputs.oumi_model_call.body ?? 'Model loading or unavailable' }}
+      ========================================
+
+  # Step 3: Kestra AI Agent combines Oumi output with comprehensive analysis
+  - id: ai_combined_analysis
+    type: io.kestra.plugin.ai.agent.AIAgent
+    description: Kestra AI Agent combines Oumi insights with multi-source analysis
+    provider:
+      type: io.kestra.plugin.ai.provider.OpenAI
+      apiKey: "{{ secret('OPENAI_API_KEY') }}"
+      modelName: gpt-4o-mini
+    systemMessage: |
+      You are a medical billing expert AI agent.
+      Combine insights from specialized fine-tuned models with your analysis.
+    prompt: |
+      Analyze this medical bill using multiple data sources:
+      
+      === PATIENT DATA ===
+      Patient: {{ inputs.patient_name }}
+      Procedure: {{ inputs.procedure }}
+      Billed: ${{ inputs.billed_amount }}
+      
+      === OUMI FINE-TUNED MODEL ANALYSIS ===
+      {{ outputs.oumi_model_call.body ?? 'Oumi model unavailable - proceed with standard analysis' }}
+      
+      === CPT CODE DATABASE ===
+      - MRI brain (70553): Avg $3,500, Medicare $400
+      - Colonoscopy (45378): Avg $3,000, Medicare $500
+      - CT scan (71250): Avg $1,500, Medicare $200
+      
+      === MEDICARE RATES DATABASE ===
+      Medicare reimburses 10-15% of typical costs.
+      >3x Medicare = overpriced, >10x = excessive
+      
+      Provide comprehensive analysis incorporating Oumi model insights:
+      1. CPT code detection
+      2. Cost comparison (billed vs expected vs Medicare)
+      3. Oumi model insights (if available)
+      4. Risk level (HIGH/MEDIUM/LOW)
+      5. Recommended action (APPEAL/NEGOTIATE/ACCEPT)
+      6. Reasoning
+
+  # Step 4: AI Agent makes final decision
+  - id: ai_final_decision
+    type: io.kestra.plugin.ai.agent.AIAgent
+    description: Final decision based on combined multi-model analysis
+    provider:
+      type: io.kestra.plugin.ai.provider.OpenAI
+      apiKey: "{{ secret('OPENAI_API_KEY') }}"
+      modelName: gpt-4o-mini
+    prompt: |
+      Based on this multi-model analysis, provide final decision:
+      
+      {{ outputs.ai_combined_analysis.textOutput }}
+      
+      Return decision as:
+      DECISION: [APPEAL/NEGOTIATE/ACCEPT]
+      RISK: [HIGH/MEDIUM/LOW]
+      CONFIDENCE: [0-100]%
+      OUMI_USED: [YES/NO]
+      REASONING: [explanation]
+
+  # Step 5: Final report
+  - id: final_report
+    type: io.kestra.plugin.core.log.Log
+    message: |
+      ========================================
+      CLAIMGUARDIAN MULTI-MODEL ANALYSIS
+      ========================================
+      
+      === OUMI MODEL (Fine-tuned) ===
+      {{ outputs.oumi_model_call.body ?? 'unavailable' }}
+      
+      === KESTRA AI AGENT ANALYSIS ===
+      {{ outputs.ai_combined_analysis.textOutput }}
+      
+      === FINAL DECISION ===
+      {{ outputs.ai_final_decision.textOutput }}
+      
+      ========================================
+      SPONSOR INTEGRATIONS DEMONSTRATED:
+      ✅ Oumi ($3K): Fine-tuned model called via HuggingFace API
+      ✅ Kestra ($4K): AI Agent summarizing data + making decisions
+      ========================================
+
+outputs:
+  - id: oumi_response
+    type: STRING
+    value: "{{ outputs.oumi_model_call.body ?? 'unavailable' }}"
+  - id: combined_analysis
+    type: STRING
+    value: "{{ outputs.ai_combined_analysis.textOutput }}"
+  - id: final_decision
+    type: STRING
+    value: "{{ outputs.ai_final_decision.textOutput }}"
