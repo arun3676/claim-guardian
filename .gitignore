@@ -10,6 +10,7 @@ __pycache__/
 .env
 .env.local
 .env*.local
+.env_encoded
 
 # Build outputs
 .next/
@@ -42,4 +43,7 @@ temp/
 
 # Scripts mentioning prize/sponsor
 create-prs.ps1
+
+# Old/archived files (moved to old/ folder)
+old/
 
