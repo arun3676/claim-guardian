@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  kestra:
+    image: kestra/kestra:latest
+    container_name: claimguardian-kestra
+    ports:
+      - "8080:8080"
+    environment:
+      - KESTRA_CONFIGURATION=|
+        kestra:
+          server:
+            basic-auth:
+              enabled: false
+            cors:
+              enabled: true
+              allowed-origins:
+                - http://localhost:3000
+                - https://*.vercel.app
+          repository:
+            type: memory
+          storage:
+            type: local
+            local:
+              base-path: /app/storage
+          queue:
+            type: memory
+          tasks:
+            tmp-dir:
+              path: /tmp/kestra-wd/tmp
+              purge:
+                schedule: "0 0 * * *"
+                ttl: P7D
+          url: http://localhost:8080/
+    volumes:
+      - kestra-data:/app/storage
+      - kestra-tmp:/tmp/kestra-wd
+      - ./kestra-flows:/app/flows
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  kestra-data:
+    driver: local
+  kestra-tmp:
+    driver: local
+

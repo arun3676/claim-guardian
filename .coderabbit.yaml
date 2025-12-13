@@ -63,10 +63,17 @@ reviews:
       instructions: |
         This is a Kestra workflow configuration.
         Focus on:
-        - Workflow correctness
-        - Human-in-the-loop implementation
+        - AI Agent configuration correctness (io.kestra.plugin.ai.agent.AIAgent)
+        - Workflow input/output validation
+        - Secret management (no hardcoded API keys, use {{ secret('KEY') }})
         - Error handling in pipeline
         - Data flow between tasks
+        - Webhook trigger security (validate inputs, rate limiting)
+        - Memory provider configuration (if used)
+        - Tool integration (KestraTask, KestraFlow) correctness
+        - Conditional routing logic (Switch cases)
+        - Output format validation (JSON structure)
+        - External API integration security (HTTPS, authentication)
         
     - path: "**/oumi-*/**"
       instructions: |
