@@ -32,7 +32,7 @@ services:
     volumes:
       - kestra-data:/app/storage
       - kestra-tmp:/tmp/kestra-wd
-      - ./kestra-flows:/app/flows
+      - ./kestra-fixed new:/app/flows
       - /var/run/docker.sock:/var/run/docker.sock
     env_file:
       - .env_encoded
