@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "claimguardian": {
+      "command": "npx",
+      "args": ["-y", "tsx", "./mcp-servers/src/index.ts"]
+    }
+  }
+}
