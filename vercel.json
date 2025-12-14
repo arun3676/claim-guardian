@@ -1,9 +1,39 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "cd frontend && npm install && npm run build",
   "outputDirectory": "frontend/.next",
   "framework": "nextjs",
   "installCommand": "cd frontend && npm install",
   "devCommand": "cd frontend && npm run dev",
+  "regions": ["iad1"],
+  "functions": {
+    "frontend/src/app/api/chat/route.ts": {
+      "maxDuration": 30
+    },
+    "frontend/src/app/api/health/route.ts": {
+      "runtime": "edge",
+      "maxDuration": 10
+    },
+    "frontend/src/app/api/kestra/**/*.ts": {
+      "maxDuration": 60
+    },
+    "frontend/src/app/api/oumi/**/*.ts": {
+      "maxDuration": 60
+    },
+    "frontend/src/app/api/bills/**/*.ts": {
+      "maxDuration": 30
+    },
+    "frontend/src/app/api/mcp/**/*.ts": {
+      "maxDuration": 30
+    },
+    "frontend/src/app/api/analysis/**/*.ts": {
+      "maxDuration": 30
+    },
+    "frontend/src/app/api/workflow/**/*.ts": {
+      "runtime": "nodejs",
+      "maxDuration": 60
+    }
+  },
   "rewrites": [
     {
       "source": "/api/(.*)",
@@ -25,9 +55,27 @@
         {
           "key": "X-XSS-Protection",
           "value": "1; mode=block"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=()"
+        }
+      ]
+    },
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
         }
       ]
     }
-  ]
+  ],
+  "crons": []
 }
 
