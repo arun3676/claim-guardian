@@ -11,7 +11,6 @@
       "maxDuration": 30
     },
     "frontend/src/app/api/health/route.ts": {
-      "runtime": "edge",
       "maxDuration": 10
     },
     "frontend/src/app/api/kestra/**/*.ts": {
