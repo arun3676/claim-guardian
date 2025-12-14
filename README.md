@@ -4,6 +4,13 @@
 
 ---
 
+## 🔗 Live Demo
+
+**[View Live Application →](https://claim-guardian2.vercel.app/)**
+
+> Explore the interactive medical billing analysis platform with real-time CPT code lookup, billing error detection, and appeal letter generation.
+
+
 ## 🛠️ Technology Stack
 
 | Technology | Purpose | Status |
@@ -11,8 +18,7 @@
 | **Kestra** | Workflow orchestration & AI Agent | ✅ Complete |
 | **Cline** | CLI automation & MCP integration | ✅ Complete |
 | **Oumi** | Model training & fine-tuning | ✅ Complete |
-| **Vercel** | Frontend deployment | ⚠️ Pending |
-| **CodeRabbit** | Code quality & reviews | ✅ Complete |
+| **Vercel** | Frontend deployment | ✅ Complete || **CodeRabbit** | Code quality & reviews | ✅ Complete |
 
 ---
 
@@ -169,7 +175,7 @@ This project showcases extensive use of Cline throughout the entire development 
 
 ---
 
-### 4. Vercel - Deployment ⚠️
+### 4. Vercel - Deployment ✅
 
 **Purpose:** Frontend deployment platform.
 
@@ -180,8 +186,7 @@ This project showcases extensive use of Cline throughout the entire development 
 
 **See:** `docs/VERCEL_DEPLOYMENT.md` for details
 
----
-
+- ✅ **Deployed:** [Live Application](https://claim-guardian2.vercel.app/)
 ### 5. CodeRabbit - Code Quality ✅
 
 **Purpose:** Automated code reviews and quality improvements.
