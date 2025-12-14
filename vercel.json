@@ -30,7 +30,6 @@
       "maxDuration": 30
     },
     "frontend/src/app/api/workflow/**/*.ts": {
-      "runtime": "nodejs",
       "maxDuration": 60
     }
   },
