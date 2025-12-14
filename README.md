@@ -235,13 +235,11 @@ This project showcases extensive use of Cline throughout the entire development 
 - **[Technology Integrations](docs/TECHNOLOGY_INTEGRATIONS.md)** - Complete documentation of technology integrations
 - **[Cline Automation](docs/CLINE_AUTOMATION.md)** - Cline CLI automation scripts and usage
 - **[Oumi Training](docs/OUMI_TRAINING.md)** - Model training process and evaluation
-- **[Demo Video Script](docs/DEMO_VIDEO_SCRIPT.md)** - 2-minute demo script for submission
+  
 
 ---
 
-## 🎬 Demo Video
 
-See `docs/DEMO_VIDEO_SCRIPT.md` for the complete demo script covering all technology integrations.
 
 ---
 
