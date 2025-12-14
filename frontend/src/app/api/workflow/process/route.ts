@@ -5,8 +5,7 @@
  * 1. Upload PDF to Vercel Blob
  * 2. Extract text from PDF
  * 3. Use MCP tools to analyze billing
- * 4. Trigger Kestra workflow (optional)
- * 5. Return results with detailed logs
+ * 4. Return results with detailed logs
  * 
  * @route POST /api/workflow/process
  * @runtime nodejs - Required for pdf-parse library
